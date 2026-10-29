@@ -12,7 +12,8 @@
 	});
 </script>
 
-<div class="paper fixed bottom-4 left-1/2 z-20 w-[min(640px,calc(100vw-32px))] -translate-x-1/2">
+<!-- Leaves room for the toolbar, the gauges and the action panel around it -->
+<div class="paper w-[min(640px,calc(100vw-384px))]">
 	<div bind:this={output} class="ruled h-48 overflow-y-auto px-5">
 		{#each entries as entry}
 			<div>{formatLogEntry(entry)}</div>
@@ -23,15 +24,6 @@
 </div>
 
 <style>
-	/* Hand-drawn ink border on cream paper */
-	.paper {
-		background: #fdf8e8;
-		border: 2px solid #2b2b3a;
-		border-radius: 255px 15px 225px 15px / 15px 225px 15px 255px;
-		box-shadow: 3px 4px 0 rgba(43, 43, 58, 0.15);
-		overflow: hidden;
-	}
-
 	/* Notebook lines, one per text line */
 	.ruled {
 		font-family: 'Kalam', cursive;

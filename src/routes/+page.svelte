@@ -1,14 +1,22 @@
 <script lang="ts">
+	import ActionPanel, { type ActionMode } from '$lib/components/ActionPanel.svelte';
+	import CharacterSheet from '$lib/components/CharacterSheet.svelte';
+	import LifeGauge from '$lib/components/LifeGauge.svelte';
+	import InventoryPanel from '$lib/components/Inventory.svelte';
+	import Panel from '$lib/components/Panel.svelte';
 	import Terminal from '$lib/components/Terminal.svelte';
+	import TimeGauge from '$lib/components/TimeGauge.svelte';
+	import Toolbar from '$lib/components/Toolbar.svelte';
 	import { characters as initialCharacters } from '$lib/mocks/characters';
 	import { map } from '$lib/mocks/map';
 	import { render } from '$lib/engine/render';
 	import { applyMove, isMoveFinished, startMove, type MoveAnimation } from '$lib/engine/animation';
 	import type { LogEntry } from '$lib/engine/log';
+	import type { Inventory } from '$lib/engine/types';
 	import { moveCharacter } from '$lib/engine/movement';
 	import { findPath } from '$lib/engine/pathfinding';
-	import { npcTurn } from '$lib/engine/npc';
-	import { activeId, endTurn, startTurns } from '$lib/engine/turns';
+	import { npcTurn } from '$lib/rules/npc';
+	import { activeId, endTurn, moveBlock, spendAction, startTurns } from '$lib/rules/turns';
 
 	// Delay before an NPC acts, so its turn is visible
 	const NPC_DELAY_MS = 600;
@@ -20,6 +28,25 @@
 	let active = $derived(characters.find((c) => c.id === activeId(turns)));
 	let animation = $state.raw<MoveAnimation | null>(null);
 	let log = $state.raw<LogEntry[]>([]);
+
+	let mode = $state<ActionMode>('move');
+	let sheetOpen = $state(false);
+	let inventoryOpen = $state(false);
+	let consoleHeight = $state(0);
+
+	// Space between the panels and the edges of the page or the console
+	const PANEL_GAP = 16;
+
+	// The PG shown in the panels: the active one, or during NPC turns the last PG who acted
+	let viewed = $derived.by(() => {
+		const { order, current } = turns;
+		for (let i = 0; i < order.length; i++) {
+			const id = order[(current - i + order.length) % order.length];
+			const character = characters.find((c) => c.id === id);
+			if (character?.type === 'PG') return character;
+		}
+		return undefined;
+	});
 
 	function addLog(character: string, action: string) {
 		log = [...log, { character, action }];
@@ -57,16 +84,26 @@
 	});
 
 	function handleMapClick(event: MouseEvent) {
-		if (active?.type !== 'PG' || animation) return;
+		if (active?.type !== 'PG' || animation || mode !== 'move') return;
+		const block = moveBlock(turns.actions);
+		if (!block) {
+			addLog(active.name, 'has no time left to move');
+			return;
+		}
 		const target = { x: event.offsetX, y: event.offsetY };
 		const path = findPath(map, characters, active, target);
 		if (path) {
 			animation = startMove(active, path, performance.now());
 			characters = moveCharacter(characters, active.id, target);
+			turns = spendAction(turns, block);
 			addLog(active.name, `moves to (${target.x}, ${target.y})`);
 		} else {
 			addLog(active.name, 'cannot go there');
 		}
+	}
+
+	function updateInventory(id: string, inventory: Inventory) {
+		characters = characters.map((c) => (c.id === id ? { ...c, inventory } : c));
 	}
 
 	function handleEndTurn() {
@@ -118,5 +155,45 @@
 		></canvas>
 	</div>
 
-	<Terminal entries={log} />
+	<div
+		bind:clientHeight={consoleHeight}
+		class="fixed bottom-4 left-1/2 z-40 flex -translate-x-1/2 gap-3"
+	>
+		<Toolbar bind:sheetOpen bind:inventoryOpen />
+		<Terminal entries={log} />
+		{#if viewed}
+			<LifeGauge hp={viewed.hp} />
+			<!-- Outside its own turn the viewed PG has no time -->
+			<TimeGauge actions={viewed.id === active?.id ? turns.actions : null} />
+		{/if}
+		<ActionPanel bind:mode />
+	</div>
+
+	{#if viewed}
+		{#if sheetOpen}
+			<Panel
+				title="Character sheet"
+				side="left"
+				top={PANEL_GAP}
+				bottom={consoleHeight + 2 * PANEL_GAP}
+				onclose={() => (sheetOpen = false)}
+			>
+				<CharacterSheet character={viewed} />
+			</Panel>
+		{/if}
+		{#if inventoryOpen}
+			<Panel
+				title="Inventory"
+				side="right"
+				top={PANEL_GAP}
+				bottom={consoleHeight + 2 * PANEL_GAP}
+				onclose={() => (inventoryOpen = false)}
+			>
+				<InventoryPanel
+					inventory={viewed.inventory}
+					onchange={(inventory) => updateInventory(viewed.id, inventory)}
+				/>
+			</Panel>
+		{/if}
+	{/if}
 </div>
