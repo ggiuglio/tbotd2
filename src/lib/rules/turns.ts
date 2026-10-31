@@ -1,13 +1,13 @@
 import type { Character } from '$lib/engine/types';
 
-// The time of a turn is split in three blocks: the standard block allows a standard action or a move,
-// the move block only a move, the quick block only a quick action
+// The time of a turn is split in three blocks: the standard block allows a standard action, a move
+// or a quick action, the move block a move or a quick action, the quick block only a quick action
 export type ActionBlock = 'standard' | 'move' | 'quick';
 
 // Whether each block is still available
 export type Actions = Record<ActionBlock, boolean>;
 
-const FULL_ACTIONS: Actions = { standard: true, move: true, quick: true };
+export const FULL_ACTIONS: Actions = { standard: true, move: true, quick: true };
 
 export type TurnState = {
 	// Character ids
@@ -40,8 +40,25 @@ export function moveBlock(actions: Actions): ActionBlock | undefined {
 	return undefined;
 }
 
+// The block a quick action uses: the quick block first, then the move one, keeping the standard one for last
+export function quickBlock(actions: Actions): ActionBlock | undefined {
+	if (actions.quick) return 'quick';
+	if (actions.move) return 'move';
+	if (actions.standard) return 'standard';
+	return undefined;
+}
+
 export function spendAction(state: TurnState, block: ActionBlock): TurnState {
 	return { ...state, actions: { ...state.actions, [block]: false } };
+}
+
+// Takes a character out of the order, e.g. when it dies; the active character stays active
+export function removeFromTurns(state: TurnState, id: string): TurnState {
+	const index = state.order.indexOf(id);
+	if (index === -1) return state;
+	const order = state.order.filter((o) => o !== id);
+	const current = index < state.current ? state.current - 1 : state.current;
+	return { ...state, order, current: order.length ? current % order.length : 0 };
 }
 
 export function activeId(state: TurnState): string | undefined {

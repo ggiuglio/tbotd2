@@ -6,7 +6,8 @@ const ariaShortbow: Item = {
 	type: 'twoHandedWeapon',
 	quantity: 1,
 	weight: 2,
-	ranged: true
+	ranged: true,
+	damage: { count: 1, sides: 6 }
 };
 
 // Temporary hardcoded inventories, keyed by character id
@@ -21,13 +22,13 @@ export const inventories: Record<string, Inventory> = {
 		},
 		carried: [
 			{ id: 'arrow', name: 'Arrow', type: 'miscellanea', quantity: 20, weight: 0.05 },
-			{ id: 'dagger', name: 'Dagger', type: 'weapon', quantity: 2, weight: 1 },
+			{ id: 'dagger', name: 'Dagger', type: 'weapon', quantity: 2, weight: 1, damage: { count: 1, sides: 4 } },
 			{ id: 'healing-potion', name: 'Potion of Healing', type: 'miscellanea', quantity: 1, weight: 0.5 }
 		]
 	},
 	borin: {
 		equipped: {
-			rightHand: { id: 'battleaxe', name: 'Battleaxe', type: 'weapon', quantity: 1, weight: 4 },
+			rightHand: { id: 'battleaxe', name: 'Battleaxe', type: 'weapon', quantity: 1, weight: 4, damage: { count: 1, sides: 8 } },
 			leftHand: { id: 'shield', name: 'Shield', type: 'shield', quantity: 1, weight: 6 },
 			body: { id: 'chain-mail', name: 'Chain Mail', type: 'armor', quantity: 1, weight: 55, armorClass: 16 },
 			neck: { id: 'amulet-of-health', name: 'Amulet of Health', type: 'amulet', quantity: 1, weight: 0 }
@@ -36,19 +37,19 @@ export const inventories: Record<string, Inventory> = {
 	},
 	goblin: {
 		equipped: {
-			rightHand: { id: 'scimitar', name: 'Scimitar', type: 'weapon', quantity: 1, weight: 3 },
+			rightHand: { id: 'scimitar', name: 'Scimitar', type: 'weapon', quantity: 1, weight: 3, damage: { count: 1, sides: 6 } },
 			leftHand: { id: 'shield', name: 'Shield', type: 'shield', quantity: 1, weight: 6 },
 			body: { id: 'leather-armor', name: 'Leather Armor', type: 'armor', quantity: 1, weight: 10, armorClass: 11 }
 		},
 		carried: [
-			{ id: 'shortbow', name: 'Shortbow', type: 'twoHandedWeapon', quantity: 1, weight: 2, ranged: true },
+			{ id: 'shortbow', name: 'Shortbow', type: 'twoHandedWeapon', quantity: 1, weight: 2, ranged: true, damage: { count: 1, sides: 6 } },
 			{ id: 'arrow', name: 'Arrow', type: 'miscellanea', quantity: 10, weight: 0.05 }
 		]
 	},
 	innkeeper: {
 		equipped: {},
 		carried: [
-			{ id: 'club', name: 'Club', type: 'weapon', quantity: 1, weight: 2 },
+			{ id: 'club', name: 'Club', type: 'weapon', quantity: 1, weight: 2, damage: { count: 1, sides: 4 } },
 			{ id: 'ale', name: 'Mug of Ale', type: 'miscellanea', quantity: 3, weight: 1 }
 		]
 	}

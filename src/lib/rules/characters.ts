@@ -24,7 +24,8 @@ export function armorClass(character: Character): number {
 	return base + abilityModifier(character.abilities.dex) + (shield ? SHIELD_BONUS : 0) + bonus;
 }
 
-export type Attack = { weapon: Item; bonus: number };
+// The bonus is added to the attack roll, the damage bonus to the damage dice
+export type Attack = { weapon: Item; bonus: number; damageBonus: number };
 
 // Null where nothing to attack with is held: a two-handed weapon fills twoHands and leaves the single hands empty
 export type Attacks = {
@@ -46,12 +47,12 @@ export function attacks(character: Character): Attacks {
 	};
 }
 
-// Ranged: Dexterity + weapon bonus; melee: Strength + weapon bonus
+// Ranged: Dexterity + weapon bonus; melee: Strength + weapon bonus. Damage adds the same ability modifier
 function attack(character: Character, weapon: Item): Attack {
 	const ability = weapon.ranged
 		? abilityModifier(character.abilities.dex)
 		: meleeStrength(character, weapon);
-	return { weapon, bonus: ability + (weapon.attackBonus ?? 0) };
+	return { weapon, bonus: ability + (weapon.attackBonus ?? 0), damageBonus: ability };
 }
 
 // A penalty is not multiplied

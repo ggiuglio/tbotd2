@@ -17,6 +17,10 @@ export function slotsFor(type: ItemType, slot: EquipmentSlot): EquipmentSlot[] |
 	return SLOT_RULES[type].find((slots) => slots.includes(slot));
 }
 
+export function isWeapon(item: Item): boolean {
+	return item.type === 'weapon' || item.type === 'twoHandedWeapon';
+}
+
 export function canEquip(item: Item, slot: EquipmentSlot): boolean {
 	return slotsFor(item.type, slot) !== undefined;
 }
@@ -53,6 +57,10 @@ export function unequip(inventory: Inventory, slot: EquipmentSlot): Inventory {
 	for (const s of slotsFor(item.type, slot) ?? [slot]) delete equipped[s];
 
 	return { equipped, carried: addToCarried(inventory.carried, item) };
+}
+
+export function addItem(inventory: Inventory, item: Item): Inventory {
+	return { ...inventory, carried: addToCarried(inventory.carried, item) };
 }
 
 // Merges the item into an existing stack with the same id

@@ -1,9 +1,16 @@
 import { characterRadius } from './characters';
-import type { Character, CharacterType, GameMap } from './types';
+import type { Character, CharacterType, GameMap, Mood } from './types';
 
 const TYPE_COLOR: Record<CharacterType, string> = {
 	PG: '#1e88e5',
 	PNG: '#e53935'
+};
+
+// NPCs with a mood are drawn in its color instead of their type's
+export const MOOD_COLOR: Record<Mood, string> = {
+	friendly: '#2e7d32',
+	neutral: '#757575',
+	hostile: '#e53935'
 };
 
 const ACTIVE_COLOR = '#f9a825';
@@ -40,7 +47,7 @@ export function render(
 	ctx.textBaseline = 'top';
 	for (const character of characters) {
 		const radius = characterRadius(character);
-		const color = TYPE_COLOR[character.type];
+		const color = character.mood ? MOOD_COLOR[character.mood] : TYPE_COLOR[character.type];
 		if (character.id === activeId) {
 			ctx.strokeStyle = ACTIVE_COLOR;
 			ctx.lineWidth = 4;
@@ -54,6 +61,7 @@ export function render(
 		ctx.arc(character.position.x, character.position.y, radius, 0, Math.PI * 2);
 		ctx.stroke();
 		ctx.fillStyle = color;
-		ctx.fillText(character.name, character.position.x, character.position.y + radius + 4);
+		const label = character.mood ? `${character.name} (${character.mood})` : character.name;
+		ctx.fillText(label, character.position.x, character.position.y + radius + 4);
 	}
 }

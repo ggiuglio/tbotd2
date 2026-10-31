@@ -4,13 +4,17 @@ export function distance(a: Point, b: Point): number {
 	return Math.hypot(b.x - a.x, b.y - a.y);
 }
 
-export function pointSegmentDistance(p: Point, a: Point, b: Point): number {
+export function closestPointOnSegment(p: Point, a: Point, b: Point): Point {
 	const dx = b.x - a.x;
 	const dy = b.y - a.y;
 	const lengthSq = dx * dx + dy * dy;
-	if (lengthSq === 0) return distance(p, a);
+	if (lengthSq === 0) return a;
 	const t = Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / lengthSq));
-	return distance(p, { x: a.x + t * dx, y: a.y + t * dy });
+	return { x: a.x + t * dx, y: a.y + t * dy };
+}
+
+export function pointSegmentDistance(p: Point, a: Point, b: Point): number {
+	return distance(p, closestPointOnSegment(p, a, b));
 }
 
 export function segmentDistance(a: Point, b: Point, c: Point, d: Point): number {
@@ -24,7 +28,7 @@ export function segmentDistance(a: Point, b: Point, c: Point, d: Point): number 
 }
 
 // Strict crossing only; touching and collinear cases are covered by the point distances
-function segmentsCross(a: Point, b: Point, c: Point, d: Point): boolean {
+export function segmentsCross(a: Point, b: Point, c: Point, d: Point): boolean {
 	const o1 = cross(a, b, c);
 	const o2 = cross(a, b, d);
 	const o3 = cross(c, d, a);

@@ -5,7 +5,11 @@
 	let {
 		inventory,
 		onchange
-	}: { inventory: Inventory; onchange: (inventory: Inventory) => void } = $props();
+	}: {
+		inventory: Inventory;
+		// equipped is the item just put in a slot, if any
+		onchange: (inventory: Inventory, equipped?: Item) => void;
+	} = $props();
 
 	// Laid out like a body facing the viewer, so the right hand is on the left.
 	// Positions are in pixels inside the figure
@@ -63,7 +67,7 @@
 		if (!dragged || !canDropOn(slot)) return;
 		// An equipped item moving to another slot goes through carried first
 		const source = dragged.slot ? unequip(inventory, dragged.slot) : inventory;
-		onchange(equip(source, dragged.item.id, slot));
+		onchange(equip(source, dragged.item.id, slot), dragged.item);
 		endDrag();
 	}
 

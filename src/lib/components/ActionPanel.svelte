@@ -8,15 +8,28 @@
 </script>
 
 <nav class="paper grid w-28 grid-cols-2 place-content-center place-items-center gap-1 py-2" aria-label="Actions">
-	<!-- Not implemented yet -->
-	<button class="icon-button" title="Look (coming soon)" aria-label="Look" disabled>
+	<button
+		class="icon-button"
+		class:selected={mode === 'look'}
+		title="Look"
+		aria-label="Look"
+		aria-pressed={mode === 'look'}
+		onclick={() => (mode = 'look')}
+	>
 		<!-- Eye -->
 		<svg viewBox="0 0 24 24">
 			<path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12z" />
 			<circle cx="12" cy="12" r="2.5" />
 		</svg>
 	</button>
-	<button class="icon-button" title="Talk (coming soon)" aria-label="Talk" disabled>
+	<button
+		class="icon-button"
+		class:selected={mode === 'talk'}
+		title="Talk"
+		aria-label="Talk"
+		aria-pressed={mode === 'talk'}
+		onclick={() => (mode = 'talk')}
+	>
 		<!-- Speech bubble -->
 		<svg viewBox="0 0 24 24">
 			<path d="M4 5h16v11H10l-4 4v-4H4z" />
@@ -37,7 +50,14 @@
 			<path d="M5 19h15" />
 		</svg>
 	</button>
-	<button class="icon-button" title="Attack (coming soon)" aria-label="Attack" disabled>
+	<button
+		class="icon-button"
+		class:selected={mode === 'attack'}
+		title="Attack"
+		aria-label="Attack"
+		aria-pressed={mode === 'attack'}
+		onclick={() => (mode = 'attack')}
+	>
 		<!-- Sword -->
 		<svg viewBox="0 0 24 24">
 			<path d="M19 3l-9.5 9.5" />
