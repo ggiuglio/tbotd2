@@ -16,21 +16,31 @@ export type TurnState = {
 	round: number;
 	// Time left to the active character
 	actions: Actions;
+	// Meters left in the move action under way, 0 when none is
+	movement: number;
 };
+
+// Rounding slack, so a click right on the edge of the range still counts
+const MOVEMENT_EPSILON = 0.01;
+// A leftover shorter than this ends the move action: it is too short to be of use, and its range
+// would be hidden under the character, so the next move action is shown instead
+const MIN_MOVEMENT = 1;
 
 export function startTurns(characters: Character[]): TurnState {
 	return {
 		order: shuffle(characters.map((c) => c.id)),
 		current: 0,
 		round: 1,
-		actions: FULL_ACTIONS
+		actions: FULL_ACTIONS,
+		movement: 0
 	};
 }
 
 export function endTurn(state: TurnState): TurnState {
 	const next = state.current + 1;
-	if (next < state.order.length) return { ...state, current: next, actions: FULL_ACTIONS };
-	return { ...state, current: 0, round: state.round + 1, actions: FULL_ACTIONS };
+	const fresh = { actions: FULL_ACTIONS, movement: 0 };
+	if (next < state.order.length) return { ...state, current: next, ...fresh };
+	return { ...state, current: 0, round: state.round + 1, ...fresh };
 }
 
 // The block a move uses: the move block first, so the standard one stays free for an action
@@ -46,6 +56,33 @@ export function quickBlock(actions: Actions): ActionBlock | undefined {
 	if (actions.move) return 'move';
 	if (actions.standard) return 'standard';
 	return undefined;
+}
+
+// How far the character can move now: what is left of the move action under way,
+// or a whole move action (the speed) when none is under way and one can still start
+export function movementLeft(state: TurnState, speed: number): number {
+	if (state.movement > 0) return state.movement;
+	return moveBlock(state.actions) ? speed : 0;
+}
+
+// Takes a move of the given meters out of the turn: from the move action under way when enough is left,
+// otherwise a new move action starts (the leftover is lost). Undefined when the move cannot be made
+export function spendMovement(
+	state: TurnState,
+	speed: number,
+	meters: number
+): TurnState | undefined {
+	if (meters <= state.movement + MOVEMENT_EPSILON) {
+		return { ...state, movement: leftover(state.movement, meters) };
+	}
+	const block = moveBlock(state.actions);
+	if (!block || meters > speed + MOVEMENT_EPSILON) return undefined;
+	return { ...spendAction(state, block), movement: leftover(speed, meters) };
+}
+
+function leftover(movement: number, meters: number): number {
+	const left = movement - meters;
+	return left < MIN_MOVEMENT ? 0 : left;
 }
 
 export function spendAction(state: TurnState, block: ActionBlock): TurnState {

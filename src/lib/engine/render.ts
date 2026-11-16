@@ -1,5 +1,5 @@
 import { characterRadius } from './characters';
-import type { Character, CharacterType, GameMap, Mood } from './types';
+import type { Character, CharacterType, GameMap, Mood, Point } from './types';
 
 const TYPE_COLOR: Record<CharacterType, string> = {
 	PG: '#1e88e5',
@@ -15,13 +15,46 @@ export const MOOD_COLOR: Record<Mood, string> = {
 
 const ACTIVE_COLOR = '#f9a825';
 
+// A circle on the map, in pixels
+export type Area = { center: Point; radius: number };
+
+// How far the active character can still move
+export type MoveRange = Area;
+
 export function render(
 	ctx: CanvasRenderingContext2D,
 	map: GameMap,
 	characters: Character[],
-	activeId?: string
+	activeId?: string,
+	moveRange?: MoveRange,
+	menaceAreas: Area[] = []
 ) {
 	ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+
+	// Areas threatened by characters that are not friends of the one moving
+	for (const area of menaceAreas) {
+		ctx.beginPath();
+		ctx.arc(area.center.x, area.center.y, area.radius, 0, Math.PI * 2);
+		ctx.fillStyle = 'rgba(229, 57, 53, 0.12)';
+		ctx.fill();
+		ctx.strokeStyle = 'rgba(229, 57, 53, 0.5)';
+		ctx.lineWidth = 1.5;
+		ctx.setLineDash([4, 4]);
+		ctx.stroke();
+		ctx.setLineDash([]);
+	}
+
+	if (moveRange) {
+		ctx.beginPath();
+		ctx.arc(moveRange.center.x, moveRange.center.y, moveRange.radius, 0, Math.PI * 2);
+		ctx.fillStyle = 'rgba(30, 136, 229, 0.08)';
+		ctx.fill();
+		ctx.strokeStyle = 'rgba(30, 136, 229, 0.6)';
+		ctx.lineWidth = 2;
+		ctx.setLineDash([8, 6]);
+		ctx.stroke();
+		ctx.setLineDash([]);
+	}
 
 	ctx.strokeStyle = '#333';
 	ctx.lineWidth = 4;

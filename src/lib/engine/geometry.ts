@@ -1,7 +1,40 @@
 import type { Point } from './types';
 
+// Map scale: a medium character (40 pixels wide) takes about a meter and a half
+export const PIXELS_PER_METER = 25;
+
 export function distance(a: Point, b: Point): number {
 	return Math.hypot(b.x - a.x, b.y - a.y);
+}
+
+// Length of the path from the start through every waypoint
+export function pathLength(start: Point, waypoints: Point[]): number {
+	let length = 0;
+	let from = start;
+	for (const to of waypoints) {
+		length += distance(from, to);
+		from = to;
+	}
+	return length;
+}
+
+// The same path cut short after the given length: the waypoints up to there, ending at the cut point
+export function truncatePath(start: Point, waypoints: Point[], length: number): Point[] {
+	const result: Point[] = [];
+	let from = start;
+	let left = length;
+	for (const to of waypoints) {
+		const step = distance(from, to);
+		if (step >= left) {
+			const t = step === 0 ? 0 : left / step;
+			result.push({ x: from.x + (to.x - from.x) * t, y: from.y + (to.y - from.y) * t });
+			return result;
+		}
+		result.push(to);
+		left -= step;
+		from = to;
+	}
+	return result;
 }
 
 export function closestPointOnSegment(p: Point, a: Point, b: Point): Point {

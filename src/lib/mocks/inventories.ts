@@ -17,7 +17,7 @@ export const inventories: Record<string, Inventory> = {
 			// A two-handed weapon fills both hands
 			rightHand: ariaShortbow,
 			leftHand: ariaShortbow,
-			body: { id: 'leather-armor', name: 'Leather Armor', type: 'armor', quantity: 1, weight: 10, armorClass: 11 },
+			body: { id: 'leather-armor', name: 'Leather Armor', type: 'armor', quantity: 1, weight: 10, armorClassBonus: 1 },
 			rightFinger: { id: 'ring-of-protection', name: 'Ring of Protection', type: 'ring', quantity: 1, weight: 0, armorClassBonus: 1 }
 		},
 		carried: [
@@ -29,8 +29,8 @@ export const inventories: Record<string, Inventory> = {
 	borin: {
 		equipped: {
 			rightHand: { id: 'battleaxe', name: 'Battleaxe', type: 'weapon', quantity: 1, weight: 4, damage: { count: 1, sides: 8 } },
-			leftHand: { id: 'shield', name: 'Shield', type: 'shield', quantity: 1, weight: 6 },
-			body: { id: 'chain-mail', name: 'Chain Mail', type: 'armor', quantity: 1, weight: 55, armorClass: 16 },
+			leftHand: { id: 'shield', name: 'Shield', type: 'shield', quantity: 1, weight: 6, armorClassBonus: 2 },
+			body: { id: 'chain-mail', name: 'Chain Mail', type: 'armor', quantity: 1, weight: 55, armorClassBonus: 6 },
 			neck: { id: 'amulet-of-health', name: 'Amulet of Health', type: 'amulet', quantity: 1, weight: 0 }
 		},
 		carried: [{ id: 'rations', name: 'Rations', type: 'miscellanea', quantity: 5, weight: 2 }]
@@ -38,8 +38,8 @@ export const inventories: Record<string, Inventory> = {
 	goblin: {
 		equipped: {
 			rightHand: { id: 'scimitar', name: 'Scimitar', type: 'weapon', quantity: 1, weight: 3, damage: { count: 1, sides: 6 } },
-			leftHand: { id: 'shield', name: 'Shield', type: 'shield', quantity: 1, weight: 6 },
-			body: { id: 'leather-armor', name: 'Leather Armor', type: 'armor', quantity: 1, weight: 10, armorClass: 11 }
+			leftHand: { id: 'shield', name: 'Shield', type: 'shield', quantity: 1, weight: 6, armorClassBonus: 2 },
+			body: { id: 'leather-armor', name: 'Leather Armor', type: 'armor', quantity: 1, weight: 10, armorClassBonus: 1 }
 		},
 		carried: [
 			{ id: 'shortbow', name: 'Shortbow', type: 'twoHandedWeapon', quantity: 1, weight: 2, ranged: true, damage: { count: 1, sides: 6 } },

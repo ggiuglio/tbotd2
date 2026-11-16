@@ -51,3 +51,26 @@ export function inCombat(characters: Character[]): boolean {
 export function isDead(character: Character): boolean {
 	return character.hp.current <= 0;
 }
+
+// Meters around a character's edge it threatens with bare hands or a normal melee weapon
+const MENACE_REACH = 1.5;
+
+// How far (meters, from the edge) the character threatens: bare hands or any melee weapon menace,
+// only ranged weapons in hand menace nothing (null)
+export function menaceReach(character: Character): number | null {
+	const held = heldAttacks(character);
+	if (held.length > 0 && held.every((a) => a.weapon.ranged)) return null;
+	return MENACE_REACH;
+}
+
+// PGs and friendly NPCs are on one side; neutral and hostile NPCs each on their own
+type Side = 'party' | 'neutral' | 'hostile';
+
+function side(character: Character): Side {
+	if (character.type === 'PG' || character.mood === 'friendly') return 'party';
+	return character.mood ?? 'neutral';
+}
+
+export function areFriends(a: Character, b: Character): boolean {
+	return side(a) === side(b);
+}

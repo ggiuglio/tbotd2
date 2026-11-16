@@ -7,15 +7,19 @@
 	import Terminal from '$lib/components/Terminal.svelte';
 	import TimeGauge from '$lib/components/TimeGauge.svelte';
 	import Toolbar from '$lib/components/Toolbar.svelte';
+	import TurnOrder from '$lib/components/TurnOrder.svelte';
+	import { tick, untrack } from 'svelte';
 	import { characters as initialCharacters } from '$lib/mocks/characters';
 	import { map as initialMap } from '$lib/mocks/map';
-	import { MOOD_COLOR, render } from '$lib/engine/render';
+	import { render } from '$lib/engine/render';
 	import { applyMove, isMoveFinished, startMove, type MoveAnimation } from '$lib/engine/animation';
 	import type { Choice, LogEntry, LogOption } from '$lib/engine/log';
 	import type { Character, Inventory, Item, Mood, Point } from '$lib/engine/types';
 	import { moveCharacter } from '$lib/engine/movement';
-	import { findPath } from '$lib/engine/pathfinding';
+	import { findPath, findPathNextTo, isNextTo } from '$lib/engine/pathfinding';
 	import { canSee, pick } from '$lib/engine/sight';
+	import { characterRadius } from '$lib/engine/characters';
+	import { pathLength, PIXELS_PER_METER, truncatePath } from '$lib/engine/geometry';
 	import { npcTurn } from '$lib/rules/npc';
 	import {
 		containerOptions,
@@ -29,8 +33,10 @@
 	import {
 		heldAttacks,
 		inCombat,
+		areFriends,
 		inMeleeReach,
 		isDead,
+		menaceReach,
 		rollAttack,
 		takeAttack
 	} from '$lib/rules/combat';
@@ -40,10 +46,11 @@
 		activeId,
 		endTurn,
 		FULL_ACTIONS,
-		moveBlock,
+		movementLeft,
 		quickBlock,
 		removeFromTurns,
 		spendAction,
+		spendMovement,
 		startTurns,
 		type ActionBlock
 	} from '$lib/rules/turns';
@@ -52,6 +59,8 @@
 	const NPC_DELAY_MS = 600;
 
 	let canvas: HTMLCanvasElement;
+	let mapView: HTMLDivElement;
+	let headerHeight = $state(0);
 
 	// Containers change as they are opened and emptied
 	let map = $state.raw(initialMap);
@@ -84,6 +93,28 @@
 	let timed = $derived(inCombat(characters));
 	let available = $derived(timed ? turns.actions : FULL_ACTIONS);
 
+	// Meters the active character can still move this turn; unlimited outside combat
+	let moveLeft = $derived(active && timed ? movementLeft(turns, active.speed) : Infinity);
+
+	// Shown around the active PG in move mode, only in combat where movement is limited
+	let moveRange = $derived(
+		mode === 'move' && active?.type === 'PG' && timed && moveLeft > 0
+			? { center: active.position, radius: moveLeft * PIXELS_PER_METER }
+			: undefined
+	);
+
+	// Shown with the move range: the areas threatened by every character not friendly to the mover
+	let menaceAreas = $derived.by(() => {
+		const mover = active;
+		if (!moveRange || !mover) return [];
+		return characters.flatMap((c) => {
+			if (c.id === mover.id || areFriends(c, mover)) return [];
+			const reach = menaceReach(c);
+			if (reach === null) return [];
+			return [{ center: c.position, radius: characterRadius(c) + reach * PIXELS_PER_METER }];
+		});
+	});
+
 	function spend(block: ActionBlock) {
 		if (timed) turns = spendAction(turns, block);
 	}
@@ -100,8 +131,10 @@
 		const current = animation;
 		const chars = characters;
 		const id = active?.id;
+		const range = moveRange;
+		const menace = menaceAreas;
 		if (!current) {
-			render(ctx, currentMap, chars, id);
+			render(ctx, currentMap, chars, id, range, menace);
 			return;
 		}
 		let frame = requestAnimationFrame(function tick(now) {
@@ -110,6 +143,27 @@
 			else frame = requestAnimationFrame(tick);
 		});
 		return () => cancelAnimationFrame(frame);
+	});
+
+	// Changes only when a new turn starts, not when the order shrinks around the same character
+	let turnKey = $derived(`${turns.round}:${activeId(turns)}`);
+
+	// At the start of each turn, scroll the map so the acting character sits in the middle
+	// of the visible area, between the header and the console
+	$effect(() => {
+		void turnKey;
+		const position = untrack(() => active?.position);
+		if (!position) return;
+		tick().then(() => {
+			const rect = canvas.getBoundingClientRect();
+			const scale = rect.width / canvas.width;
+			const x = rect.left + position.x * scale;
+			const y = rect.top + position.y * scale;
+			const visibleTop = headerHeight;
+			const visibleBottom = window.innerHeight - consoleHeight - PANEL_GAP;
+			mapView.scrollBy({ left: x - window.innerWidth / 2, behavior: 'smooth' });
+			window.scrollBy({ top: y - (visibleTop + visibleBottom) / 2, behavior: 'smooth' });
+		});
 	});
 
 	$effect(() => {
@@ -297,22 +351,62 @@
 		);
 	}
 
+	// Clicking a character or an object moves next to it, anywhere else moves to the point
 	function move(target: Point) {
 		if (!active) return;
-		const block = moveBlock(available);
-		if (!block) {
+		if (moveLeft <= 0) {
 			addLog(active.name, 'has no time left to move');
 			return;
 		}
-		const path = findPath(map, characters, active, target);
-		if (path) {
-			animation = startMove(active, path, performance.now());
-			characters = moveCharacter(characters, active.id, target);
-			spend(block);
-			addLog(active.name, `moves to (${target.x}, ${target.y})`);
-		} else {
-			addLog(active.name, 'cannot go there');
+		const sighting = pick(map, characters, active, target);
+		const thing = sighting?.character
+			? {
+					name: sighting.character.name,
+					center: sighting.character.position,
+					radius: characterRadius(sighting.character)
+				}
+			: sighting?.object
+				? {
+						name: sighting.object.description,
+						center: sighting.object.center,
+						radius: sighting.object.radius
+					}
+				: null;
+		if (thing && isNextTo(active, thing.center, thing.radius)) {
+			addLog(active.name, `is already next to ${thing.name}`);
+			return;
 		}
+		let path = thing
+			? findPathNextTo(map, characters, active, thing.center, thing.radius)
+			: findPath(map, characters, active, target);
+		if (!path) {
+			addLog(active.name, thing ? `cannot get next to ${thing.name}` : 'cannot go there');
+			return;
+		}
+		let meters = pathLength(active.position, path) / PIXELS_PER_METER;
+		// Too far: walk the same path as far as the movement left allows
+		const partial = meters > moveLeft;
+		if (partial) {
+			path = truncatePath(active.position, path, moveLeft * PIXELS_PER_METER);
+			meters = moveLeft;
+		}
+		if (timed) {
+			const next = spendMovement(turns, active.speed, meters);
+			if (!next) {
+				addLog(active.name, `cannot move that far (${meters.toFixed(1)} m)`);
+				return;
+			}
+			turns = next;
+		}
+		const destination = path[path.length - 1];
+		animation = startMove(active, path, performance.now());
+		characters = moveCharacter(characters, active.id, destination);
+		const where = partial
+			? `towards ${thing ? thing.name : `(${Math.round(target.x)}, ${Math.round(target.y)})`}`
+			: thing
+				? `next to ${thing.name}`
+				: `to (${Math.round(destination.x)}, ${Math.round(destination.y)})`;
+		addLog(active.name, `moves ${where}, ${meters.toFixed(1)} m`);
 	}
 
 	// Equipping a weapon is a quick action, so only on the character's own turn; anything else is free
@@ -345,28 +439,10 @@
 
 <div class="min-h-screen bg-neutral-100">
 	<header
+		bind:clientHeight={headerHeight}
 		class="sticky top-0 z-10 flex flex-wrap items-center gap-4 border-b border-neutral-300 bg-white px-4 py-3"
 	>
 		<span class="text-sm text-neutral-500">Round {turns.round}</span>
-		<ol class="flex flex-wrap gap-2">
-			{#each turns.order as id, i}
-				{@const character = characters.find((c) => c.id === id)}
-				{#if character}
-					<li
-						class="rounded px-2 py-1 text-sm {i === turns.current
-							? 'bg-amber-400 font-semibold text-neutral-900'
-							: 'bg-neutral-100 text-neutral-600'}"
-					>
-						{character.name}
-						<span
-							class="text-xs {character.type === 'PG' ? 'text-blue-600' : 'text-red-600'}"
-							style:color={character.mood && MOOD_COLOR[character.mood]}
-							>{character.mood ?? character.type}</span
-						>
-					</li>
-				{/if}
-			{/each}
-		</ol>
 		<button
 			class="ml-auto rounded bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-700 disabled:opacity-40"
 			disabled={active?.type !== 'PG' || animation !== null}
@@ -376,17 +452,22 @@
 		</button>
 	</header>
 
-	<!-- Bottom padding keeps the lower edge of the map scrollable past the terminal -->
-	<div class="overflow-auto p-4 pb-60">
-		<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions -->
-		<canvas
-			bind:this={canvas}
-			width={map.width}
-			height={map.height}
-			class="mx-auto block border border-neutral-300 bg-white"
-			onclick={handleMapClick}
-		></canvas>
+	<!-- A margin around the map lets it scroll past its edges: wide enough on the sides
+	     to clear the turn order list, and at the bottom to clear the console -->
+	<div bind:this={mapView} class="overflow-auto">
+		<div class="mx-auto w-max px-60 pt-40 pb-60">
+			<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions -->
+			<canvas
+				bind:this={canvas}
+				width={map.width}
+				height={map.height}
+				class="block border border-neutral-300 bg-white"
+				onclick={handleMapClick}
+			></canvas>
+		</div>
 	</div>
+
+	<TurnOrder {turns} {characters} top={headerHeight + PANEL_GAP} />
 
 	<div
 		bind:clientHeight={consoleHeight}

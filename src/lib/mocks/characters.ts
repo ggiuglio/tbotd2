@@ -13,7 +13,7 @@ export const characters: Character[] = [
 		level: 3,
 		abilities: { str: 8, dex: 16, con: 12, int: 14, wis: 12, cha: 10 },
 		hp: { current: 20, max: 20 },
-		speed: 30,
+		speed: 9,
 		inventory: inventories.aria
 	},
 	{
@@ -26,7 +26,7 @@ export const characters: Character[] = [
 		level: 3,
 		abilities: { str: 16, dex: 10, con: 16, int: 8, wis: 13, cha: 10 },
 		hp: { current: 31, max: 31 },
-		speed: 25,
+		speed: 7.5,
 		inventory: inventories.borin
 	},
 	{
@@ -39,7 +39,7 @@ export const characters: Character[] = [
 		level: 1,
 		abilities: { str: 8, dex: 14, con: 10, int: 10, wis: 8, cha: 8 },
 		hp: { current: 7, max: 7 },
-		speed: 30,
+		speed: 9,
 		inventory: inventories.goblin,
 		mood: 'hostile'
 	},
@@ -53,7 +53,7 @@ export const characters: Character[] = [
 		level: 1,
 		abilities: { str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10 },
 		hp: { current: 4, max: 4 },
-		speed: 30,
+		speed: 9,
 		inventory: inventories.innkeeper,
 		mood: 'neutral'
 	}

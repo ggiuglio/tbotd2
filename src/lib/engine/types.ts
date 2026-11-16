@@ -53,9 +53,7 @@ export type Item = {
 	quantity: number;
 	// Pounds per unit
 	weight: number;
-	// Base armor class, for armor only
-	armorClass?: number;
-	// Added to the armor class while equipped, e.g. by rings and amulets
+	// Added to the armor class while equipped, e.g. by armor, shields, rings and amulets
 	armorClassBonus?: number;
 	// Weapons only: added to the attack, and whether it attacks at range rather than in melee
 	attackBonus?: number;
@@ -85,7 +83,7 @@ export type Character = {
 	level: number;
 	abilities: AbilityScores;
 	hp: HitPoints;
-	// Feet per turn
+	// Meters per move action
 	speed: number;
 	inventory: Inventory;
 	// NPCs only

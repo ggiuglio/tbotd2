@@ -1,9 +1,6 @@
 import type { Character, Item } from '$lib/engine/types';
 
-// Without armor
-const UNARMORED_AC = 10;
-
-const SHIELD_BONUS = 2;
+const BASE_AC = 10;
 
 // Two-handed melee weapons get one and a half times the Strength modifier
 const TWO_HANDED_STRENGTH = 1.5;
@@ -12,16 +9,33 @@ export function abilityModifier(score: number): number {
 	return Math.floor((score - 10) / 2);
 }
 
-// Base from the armor worn (or unarmored) + Dexterity modifier + shield bonus when holding one
-// + bonuses of the equipped items, such as rings and amulets
-export function armorClass(character: Character): number {
-	const { equipped } = character.inventory;
-	const base = equipped.body?.armorClass ?? UNARMORED_AC;
-	const shield = [equipped.leftHand, equipped.rightHand].some((item) => item?.type === 'shield');
+// Each part of the armor class, for showing how it is calculated
+export type ArmorClass = {
+	base: number;
+	dex: number;
+	// Null when no armor is worn
+	armor: { item: Item; bonus: number } | null;
+	// Every other equipped item with a bonus, e.g. shields, rings and amulets
+	items: { item: Item; bonus: number }[];
+	total: number;
+};
+
+// 10 + Dexterity modifier + armor bonus + bonuses of the other equipped items
+export function armorClassBreakdown(character: Character): ArmorClass {
+	const { body, ...others } = character.inventory.equipped;
+	const dex = abilityModifier(character.abilities.dex);
+	const armor = body ? { item: body, bonus: body.armorClassBonus ?? 0 } : null;
 	// A two-handed weapon fills two slots but counts once
-	const items = new Set(Object.values(equipped));
-	const bonus = [...items].reduce((sum, item) => sum + (item.armorClassBonus ?? 0), 0);
-	return base + abilityModifier(character.abilities.dex) + (shield ? SHIELD_BONUS : 0) + bonus;
+	const items = [...new Set(Object.values(others))]
+		.filter((item) => item.armorClassBonus)
+		.map((item) => ({ item, bonus: item.armorClassBonus ?? 0 }));
+	const total =
+		BASE_AC + dex + (armor?.bonus ?? 0) + items.reduce((sum, { bonus }) => sum + bonus, 0);
+	return { base: BASE_AC, dex, armor, items, total };
+}
+
+export function armorClass(character: Character): number {
+	return armorClassBreakdown(character).total;
 }
 
 // The bonus is added to the attack roll, the damage bonus to the damage dice

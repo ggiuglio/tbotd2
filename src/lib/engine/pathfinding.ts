@@ -1,4 +1,5 @@
 import { distance } from './geometry';
+import { characterRadius } from './characters';
 import { fits, isPathClear } from './movement';
 import type { Character, GameMap, Point } from './types';
 
@@ -81,7 +82,8 @@ export function findPath(
 				const next = r * cols + c;
 				if (!walkable[next]) continue;
 				// No cutting corners on diagonals
-				if (dr !== 0 && dc !== 0 && (!walkable[row * cols + c] || !walkable[r * cols + col])) continue;
+				if (dr !== 0 && dc !== 0 && (!walkable[row * cols + c] || !walkable[r * cols + col]))
+					continue;
 				const nextCost = cost[cell] + (dr !== 0 && dc !== 0 ? Math.SQRT2 : 1) * CELL_SIZE;
 				if (nextCost >= cost[next]) continue;
 				cost[next] = nextCost;
@@ -145,7 +147,8 @@ class MinHeap {
 				const right = left + 1;
 				let smallest = i;
 				if (left < items.length && items[left].priority < items[smallest].priority) smallest = left;
-				if (right < items.length && items[right].priority < items[smallest].priority) smallest = right;
+				if (right < items.length && items[right].priority < items[smallest].priority)
+					smallest = right;
 				if (smallest === i) break;
 				[items[smallest], items[i]] = [items[i], items[smallest]];
 				i = smallest;
@@ -153,4 +156,42 @@ class MinHeap {
 		}
 		return top.value;
 	}
+}
+
+// Space left between the mover and the thing it stops next to
+const ADJACENT_GAP = 2;
+// How many spots around the thing are tried
+const ADJACENT_SPOTS = 24;
+
+// The path to the closest reachable spot right next to a round thing (an object or a character),
+// or null when no spot around it can be reached
+export function findPathNextTo(
+	map: GameMap,
+	characters: Character[],
+	mover: Character,
+	center: Point,
+	radius: number
+): Point[] | null {
+	const reach = radius + characterRadius(mover) + ADJACENT_GAP;
+	const spots: Point[] = [];
+	for (let i = 0; i < ADJACENT_SPOTS; i++) {
+		const angle = (i / ADJACENT_SPOTS) * 2 * Math.PI;
+		const spot = {
+			x: Math.round(center.x + Math.cos(angle) * reach),
+			y: Math.round(center.y + Math.sin(angle) * reach)
+		};
+		if (fits(map, characters, mover, spot)) spots.push(spot);
+	}
+	spots.sort((a, b) => distance(mover.position, a) - distance(mover.position, b));
+
+	for (const spot of spots) {
+		const path = findPath(map, characters, mover, spot);
+		if (path) return path;
+	}
+	return null;
+}
+
+// Already within the adjacent gap of the round thing, so no need to move
+export function isNextTo(mover: Character, center: Point, radius: number): boolean {
+	return distance(mover.position, center) - radius - characterRadius(mover) <= ADJACENT_GAP + 1;
 }
